@@ -3253,7 +3253,12 @@ static volatile int numberOfThreadsForRelisce = 0;
     [toolbarPanel release];
     toolbarPanel = nil;
     
+    
+    [self finalizeSeriesViewing];
+    
+    
     [self autorelease];
+    
     
     numberOf2DViewer--;
     @synchronized( arrayOf2DViewers)
@@ -4409,11 +4414,25 @@ static volatile int numberOfThreadsForRelisce = 0;
 
 - (void) matrixPreviewPressed:(id) sender
 {
-    ThumbnailCell *c = [sender selectedCell];
+    ThumbnailCell *cell = [sender selectedCell];
+    
+    [cell setLineBreakMode: NSLineBreakByWordWrapping];
+    [cell setFont:[NSFont boldSystemFontOfSize: [[BrowserController currentBrowser] fontSize: @"dbSmallMatrixFont"]]];
+    
+    [cell setImagePosition: NSImageBelow];
+    [cell setTransparent:NO];
+    [cell setEnabled:YES];
+    
+    [cell setButtonType:NSMomentaryPushInButton];
+    [cell setBezelStyle:NSShadowlessSquareBezelStyle];
+    //[cell setShowsStateBy:NSPushInCellMask];
+    [cell setHighlightsBy:NSContentsCellMask];
+    [cell setImageScaling:NSImageScaleProportionallyDown];
+    [cell setBordered:YES];
     
     id series = [[[sender selectedCell] representedObject] object];
     
-    [self loadSelectedSeries: series rightClick: c.rightClick];
+    [self loadSelectedSeries: series rightClick: cell.rightClick];
 }
 
 -(BOOL) checkFrameSize
@@ -5044,22 +5063,32 @@ static volatile int numberOfThreadsForRelisce = 0;
             
             [previewMatrix sizeToCells];
             
-            for (NSButtonCell* cell in previewMatrix.cells) {
-                [cell setTransparent: NO];
-                [cell setBezelStyle: NSShadowlessSquareBezelStyle];
-                [cell setFont:[NSFont boldSystemFontOfSize: [[BrowserController currentBrowser] fontSize: @"dbSmallMatrixFont"]]];
-                [cell setButtonType:NSMomentaryPushInButton];
-                [cell setEnabled:YES];
-                [cell setTarget: self];
-                [cell setBordered: YES];
+            for (NSButtonCell* cell in previewMatrix.cells)
+            {
                 [cell setLineBreakMode: NSLineBreakByWordWrapping];
+                [cell setFont:[NSFont boldSystemFontOfSize: [[BrowserController currentBrowser] fontSize: @"dbSmallMatrixFont"]]];
                 [cell setBackgroundColor:nil];
-                [cell setImage: nil];
-                [cell setImageScaling:NSImageScaleNone];
-                [cell setImagePosition: NSImageBelow];
-                [cell setTitle:@""];
+                
                 [cell setRepresentedObject:nil];
+                
+                [cell setImagePosition: NSImageBelow];
+                [cell setTransparent:NO];
+                [cell setEnabled:YES];
+                
+                [cell setButtonType:NSMomentaryPushInButton];
+                [cell setBezelStyle:NSShadowlessSquareBezelStyle];
+                //[cell setShowsStateBy:NSPushInCellMask];
+                [cell setHighlightsBy:NSContentsCellMask];
+                [cell setImageScaling:NSImageScaleProportionallyDown];
+                [cell setBordered:YES];
+                
+                [cell setTitle:@""];
+                
+                [cell setImage: nil];
+                
+                [cell setTarget: self];
             }
+            
             
             for( id curStudy in studiesArray)
             {
@@ -5115,13 +5144,22 @@ static volatile int numberOfThreadsForRelisce = 0;
                             
                             switch( [[NSUserDefaults standardUserDefaults] integerForKey: @"dbFontSize"])
                             {
-                                case -1: [cell setImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 0.6]]; break;
-                                case 0: [cell setImage: retrieveImage]; break;
-                                case 1: [cell setImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 1.3]]; break;
+                                case -1:
+                                    [cell setImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 0.6]];
+                                    [cell setAlternateImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 0.6]];
+                                    break;
+                                case 0:
+                                    [cell setImage: retrieveImage];
+                                    [cell setAlternateImage: retrieveImage];
+                                    break;
+                                case 1:
+                                    [cell setImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 1.3]];
+                                    [cell setAlternateImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 1.3]];
+                                    break;
                             }
                             
                             [cell setImagePosition:NSImageOverlaps];
-                            [cell setImageScaling:NSImageScaleNone];
+                            [cell setImageScaling:NSImageScaleProportionallyDown];
                             
                         } else {
 #endif
@@ -5244,13 +5282,22 @@ static volatile int numberOfThreadsForRelisce = 0;
                         
                         switch( [[NSUserDefaults standardUserDefaults] integerForKey: @"dbFontSize"])
                         {
-                            case -1: [cell setImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 0.6]]; break;
-                            case 0: [cell setImage: retrieveImage]; break;
-                            case 1: [cell setImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 1.3]]; break;
+                            case -1:
+                                [cell setImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 0.6]];
+                                [cell setAlternateImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 0.6]];
+                                break;
+                            case 0:
+                                [cell setImage: retrieveImage];
+                                [cell setAlternateImage:retrieveImage];
+                                break;
+                            case 1:
+                                [cell setImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 1.3]];
+                                [cell setAlternateImage: [retrieveImage imageByScalingProportionallyUsingNSImage: 1.3]];
+                                break;
                         }
                         
                         [cell setImagePosition:NSImageOverlaps];
-                        [cell setImageScaling:NSImageScaleNone];
+                        [cell setImageScaling:NSImageScaleProportionallyDown];
                     }
                     @catch ( NSException *e) {
                         N2LogException( e);
@@ -5377,9 +5424,18 @@ static volatile int numberOfThreadsForRelisce = 0;
                             
                             switch( [[NSUserDefaults standardUserDefaults] integerForKey: @"dbFontSize"])
                             {
-                                case -1: [cell setImage: [img imageByScalingProportionallyUsingNSImage: 0.6]]; break;
-                                case 0: [cell setImage: img]; break;
-                                case 1: [cell setImage: [img imageByScalingProportionallyUsingNSImage: 1.3]]; break;
+                                case -1:
+                                    [cell setImage: [img imageByScalingProportionallyUsingNSImage: 0.6]];
+                                    [cell setAlternateImage:[img imageByScalingProportionallyUsingNSImage: 0.6]];
+                                    break;
+                                case 0:
+                                    [cell setImage: img];
+                                    [cell setAlternateImage:img];
+                                    break;
+                                case 1:
+                                    [cell setImage: [img imageByScalingProportionallyUsingNSImage: 1.3]];
+                                    [cell setAlternateImage:[img imageByScalingProportionallyUsingNSImage: 1.3]];
+                                    break;
                             }
                         }
                         
@@ -5631,7 +5687,7 @@ static ViewerController *draggedController = nil;
     NSPasteboard	*paste = [sender draggingPasteboard];
     long			i;
     
-    if( [[paste availableTypeFromArray: [NSArray arrayWithObject: pasteBoardOsiriX]] isEqualToString: pasteBoardOsiriX])
+    if( [[paste availableTypeFromArray: [NSArray arrayWithObject: pasteBoardHoros]] isEqualToString: pasteBoardHoros])
     {
         DCMView	*vi = [sender draggingSource];
         
@@ -5642,8 +5698,10 @@ static ViewerController *draggedController = nil;
             if( [[vi window] windowController] != self) [self completeDragOperation: [[vi window] windowController]];
         }
     }
-	else if( [[paste availableTypeFromArray: [NSArray arrayWithObject: pasteBoardOsiriXPlugin]] isEqualToString: pasteBoardOsiriXPlugin]
-             || [[paste availableTypeFromArray:[NSArray arrayWithObject:OsirixPluginPboardUTI]] isEqualToString:OsirixPluginPboardUTI])
+	else if(    [[paste availableTypeFromArray: [NSArray arrayWithObject: pasteBoardHorosPlugin]]  isEqualToString: pasteBoardHorosPlugin]
+             || [[paste availableTypeFromArray: [NSArray arrayWithObject: HorosPluginPboardUTI]]   isEqualToString: HorosPluginPboardUTI]
+             || [[paste availableTypeFromArray: [NSArray arrayWithObject: pasteBoardOsiriXPlugin]] isEqualToString: pasteBoardOsiriXPlugin]
+             || [[paste availableTypeFromArray: [NSArray arrayWithObject: OsirixPluginPboardUTI]]  isEqualToString: OsirixPluginPboardUTI])
     {
         // in this case, the drag operation was performed from a plugin.
         id source = [sender draggingSource];
@@ -7899,7 +7957,7 @@ static int avoidReentryRefreshDatabase = 0;
     
     [[NSNotificationCenter defaultCenter] removeObserver: self];
     
-    [self finalizeSeriesViewing];
+    //[self finalizeSeriesViewing]; /**** CALLED IN windowWillClose *****/
     
     @synchronized( loadingThread)
     {
@@ -20744,7 +20802,10 @@ static float oldsetww, oldsetwl;
     [nc addObserver:self selector:@selector(reportToolbarItemWillPopUp:) name:NSPopUpButtonWillPopUpNotification object:nil];
     
     
-    [[self window] registerForDraggedTypes: [NSArray arrayWithObjects:NSFilenamesPboardType, pasteBoardOsiriX, pasteBoardOsiriXPlugin, OsirixPluginPboardUTI, @"BrowserController.database.context.XIDs", nil]];
+    [[self window] registerForDraggedTypes: [NSArray arrayWithObjects:NSFilenamesPboardType,
+                                             pasteBoardHoros, pasteBoardHorosPlugin, HorosPluginPboardUTI,
+                                             pasteBoardOsiriX, pasteBoardOsiriXPlugin, OsirixPluginPboardUTI,
+                                             @"BrowserController.database.context.XIDs", nil]];
     
     if( [[pixList[0] objectAtIndex: 0] isRGB] == NO)
     {

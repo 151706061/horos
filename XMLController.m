@@ -714,6 +714,9 @@ extern int delayedTileWindows;
 
 - (void)windowWillClose:(NSNotification *)notification
 {
+    table.dataSource = nil;
+    table.delegate = nil;
+    
 	[[self window] setAcceptsMouseMovedEvents: NO];
 	
 	[self autorelease];
@@ -1182,10 +1185,11 @@ extern int delayedTileWindows;
 {
     if( modificationsToApplyArray.count)
     {
+        /*
         NSMutableArray	*params = [NSMutableArray arrayWithObjects:@"dcmodify", @"--verbose", @"--ignore-errors", nil];
-		
 		[params addObjectsFromArray: modificationsToApplyArray];
-		
+		*/
+         
 		NSArray *objects = [self arrayOfFiles];
 		NSMutableArray *files = [NSMutableArray arrayWithArray: [objects valueForKey:@"completePath"]];
 		
@@ -1193,7 +1197,7 @@ extern int delayedTileWindows;
 		{
 			[files removeDuplicatedStrings];
             
-			[params addObjectsFromArray: files];
+			//[params addObjectsFromArray: files];
 			
 			WaitRendering *wait = nil;
 			if( [files count] > 1)
@@ -1206,10 +1210,25 @@ extern int delayedTileWindows;
             
 			@try
 			{
-                NSStringEncoding encoding = [NSString encodingForDICOMCharacterSet: [[DicomFile getEncodingArrayForFile: srcFile] objectAtIndex: 0]];
+                //NSStringEncoding encoding = [NSString encodingForDICOMCharacterSet: [[DicomFile getEncodingArrayForFile: srcFile] objectAtIndex: 0]];
+				//[XMLController modifyDicom: params encoding: encoding];
                 
-				[XMLController modifyDicom: params encoding: encoding];
+                
+                
+                NSMutableArray* tagAndValues = [NSMutableArray array];
 				
+                for (int i = 0; i < [modifiedFields count]; i++)
+                {
+                    NSString* field = [modifiedFields objectAtIndex:i];
+                    NSString* value = [modifiedValues objectAtIndex:i];
+                    
+                    [tagAndValues addObject:[NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:field],(value?value:@""),nil]];
+                }
+                
+                [XMLController modifyDicom:tagAndValues dicomFiles:files];
+                
+                
+                
 				for( id loopItem in files)
 					[[NSFileManager defaultManager] removeFileAtPath:[loopItem stringByAppendingString:@".bak"] handler:nil];
 				

@@ -30,13 +30,40 @@
      the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.
  ============================================================================*/
+//
+//  options.h
+//  OsiriX_Lion
+//
+//  Created by Alex Bettarini on 17 Nov 2014.
+//  Copyright (c) 2014 Osiri-LXIV Team. All rights reserved.
+//
 
+#ifndef OPTIONS_H_INCLUDED
+#define OPTIONS_H_INCLUDED
 
-#import <SecurityInterface/SFAuthorizationView.h>
+//#define VTK_USE_SYSTEM_TIFF
 
+////////////////////////////////////////////////////////////////////////////////
+#define WITH_IMPORTANT_NOTICE
 
-@interface SFAuthorizationView (Private)
+////////////////////////////////////////////////////////////////////////////////
+#define WITH_OS_VALIDATION
 
--(void)buttonPressed:(id)sender;
+////////////////////////////////////////////////////////////////////////////////
+#define WITH_RED_CAPTION
 
-@end
+////////////////////////////////////////////////////////////////////////////////
+/* If using this feature, you might want to change the TARGETS
+ *  Build Settings,Code Signing
+ *  from "Don't Code Sign"
+ *  to "Developer ID Application: Your Name"
+ */
+//#define WITH_CODE_SIGNING // and certificate for Deployment build
+
+////////////////////////////////////////////////////////////////////////////////
+/* Also, search the source files for
+ *  BUILTIN_DCMTK
+ *  DCMDEBUG
+ *  _STEREO_VISION_
+ */
+#endif

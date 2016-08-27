@@ -31,6 +31,8 @@
      PURPOSE.
  ============================================================================*/
 
-#import "SFAuthorizationView+OsiriX.h"
+#import "SFHorosAuthorizationView.h"
 
+@implementation SFHorosAuthorizationView
 
+@end

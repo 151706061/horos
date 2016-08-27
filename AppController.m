@@ -36,6 +36,9 @@
 #import "SystemConfiguration/SCDynamicStoreCopySpecific.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <ApplicationServices/ApplicationServices.h>
+
+#import <FeedbackReporter/FRFeedbackReporter.h>
+
 #import "ToolbarPanel.h"
 #import "ThumbnailsListPanel.h"
 #import "AppController.h"
@@ -612,72 +615,6 @@ static NSString *getResolvedAliasPath(NSData* inData)
     return outPath;  
 }  
 
-static void dumpLSArchitecturesForX86_64()  
-{ 
-    // The path of the com.apple.LaunchServices.plist file.  
-    NSString *prefsPath = @"~/Library/Preferences/com.apple.LaunchServices.plist";  
-    prefsPath = [prefsPath stringByExpandingTildeInPath];  
-    
-    NSDictionary *mainDict = [NSDictionary dictionaryWithContentsOfFile:prefsPath];  
-    if(mainDict != nil)  
-    {  
-        // We are only interested by the  
-        // "LSArchitecturesForX86_64" dictionary.  
-        NSDictionary *architectureDict = [mainDict objectForKey:@"LSArchitecturesForX86_64"];  
-        
-        // Get the list of applications.  
-        // The array is ordered by applicationID.  
-        NSArray *applicationIDArray = [architectureDict allKeys];  
-        if(applicationIDArray != nil)  
-        {  
-            // For each applicationID  
-            NSUInteger i = 0;  
-            for(i = 0 ; i < [applicationIDArray count] ; i++)  
-            {  
-                NSString *applicationID = [applicationIDArray objectAtIndex:i];
-                NSArray *appArray = [architectureDict objectForKey:applicationID];
-                
-                // For each instance of the application,  
-                // there is a pair (Alias, architecture).  
-                // The alias is stored as a NSData  
-                // and the architecture as a NSString.  
-                NSUInteger j = 0;  
-                for(j = 0 ; j < [appArray count] / 2 ; j++)  
-                {  
-                    // Just for safety  
-                    if(j * 2 + 1 < [appArray count])  
-                    {  
-                        NSData *aliasData = [appArray objectAtIndex:j * 2];  
-                        
-                        NSString *theArch = [appArray objectAtIndex:j * 2 + 1];  
-                        
-                        if(aliasData != nil && theArch != nil)  
-                        {  
-                            // Get the path of the application  
-                            NSString *resolvedPath = getResolvedAliasPath(aliasData);  
-                            
-                            if( [resolvedPath isEqualToString: [[NSBundle mainBundle] bundlePath]])
-                            {
-                                if( [theArch isEqualToString: @"i386"])
-                                {										
-                                    NSAlert* alert = [[NSAlert new] autorelease];
-                                    [alert setMessageText: NSLocalizedString(@"64-bit", nil)];
-                                    [alert setInformativeText: NSLocalizedString(@"This version of Horos can run in 64-bit, but it is set to run in 32-bit. You can change this setting, by selecting the Horos icon in Applications folder, select 'Get Info' in Finder File menu and UNCHECK 'run in 32-bit mode'.", nil)];
-                                    [alert setShowsSuppressionButton:YES ];
-                                    [alert addButtonWithTitle: NSLocalizedString(@"Continue", nil)];
-                                    [alert runModal];
-                                    if ([[alert suppressionButton] state] == NSOnState)
-                                        [[NSUserDefaults standardUserDefaults] setBool:YES forKey: @"hideAlertRunIn32bit"];
-                                }
-                            }
-                        }  
-                    }  
-                }  
-            }  
-        }  
-    }
-}  
-
 void exceptionHandler(NSException *exception)
 {
     N2LogExceptionWithStackTrace(exception);
@@ -695,8 +632,6 @@ void exceptionHandler(NSException *exception)
 @end
 
 
-
-static NSDate *lastWarningDate = nil;
 
 
 @interface AppController ()
@@ -725,6 +660,24 @@ static NSDate *lastWarningDate = nil;
 	}
 	return YES;
 }
+
+
++(BOOL) hasMacOSXElCapitan
+{
+    SInt32 OSXversionMajor, OSXversionMinor;
+    if(Gestalt(gestaltSystemVersionMajor, &OSXversionMajor) == noErr &&
+       Gestalt(gestaltSystemVersionMinor, &OSXversionMinor) == noErr)
+    {
+        if(OSXversionMajor == 10 &&
+           OSXversionMinor >= 11)
+        {
+            return YES;
+        }
+    }
+    
+    return NO;
+}
+
 
 +(BOOL) hasMacOSXYosemite
 {
@@ -835,6 +788,7 @@ static NSDate *lastWarningDate = nil;
 -(void)applicationDidChangeScreenParameters:(NSNotification*)aNotification
 {
     NSLog( @"--- applicationDidChangeScreenParameters");
+    
     [[AppController sharedAppController] closeAllViewers: self];
     
     [AppController resetThumbnailsList];
@@ -3527,7 +3481,7 @@ static BOOL initialized = NO;
     {
         [[NSFileManager defaultManager] removeItemAtPath: OsiriXCrashed error: nil];
         
-        if( [[NSUserDefaults standardUserDefaults] boolForKey: @"CheckOsiriXUpdates4"] == NO)
+        if( [[NSUserDefaults standardUserDefaults] boolForKey: @"CheckHorosUpdates"] == NO)
         {
             if( [[NSUserDefaults standardUserDefaults] boolForKey: @"hideListenerError"] == NO)
                 [NSThread detachNewThreadSelector: @selector(checkForUpdates:) toTarget: self withObject: @"crash"];
@@ -3714,7 +3668,7 @@ static BOOL initialized = NO;
     
     //dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.f * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [[FRFeedbackReporter sharedReporter] orderFront];
+            [FRFeedbackReporter sharedReporter];
         });
     //});
 }
@@ -4144,7 +4098,7 @@ static BOOL initialized = NO;
 		switch( NSRunInformationalAlertPanel( NSLocalizedString(@"Horos Updates", nil), NSLocalizedString( @"Would you like to activate automatic checking for updates?", nil), NSLocalizedString( @"Yes", nil), NSLocalizedString( @"No", nil), nil))
 		{
 			case 0:
-				[[NSUserDefaults standardUserDefaults] setObject: @"NO" forKey: @"CheckOsiriXUpdates4"];
+				[[NSUserDefaults standardUserDefaults] setObject: @"NO" forKey: @"CheckHorosUpdates"];
 			break;
 		}
 	}
@@ -4429,10 +4383,7 @@ static BOOL initialized = NO;
     if( [sender isKindOfClass:[NSString class]] && [sender isEqualToString: @"crash"])
         verboseAfterCrash = YES;
     
-	if( [AppController hasMacOSXMountainLion]) // or better
-		url = [NSURL URLWithString:URL_HOROS_VERSION];
-	else
-		url = [NSURL URLWithString:URL_HOROS_VERSION_OLD_OS];  // TODO: remove
+    url = [NSURL URLWithString:URL_HOROS_VERSION];
 	
 	if( url)
 	{
@@ -4451,7 +4402,7 @@ static BOOL initialized = NO;
 			}
 			else
 			{
-				if( ([[NSUserDefaults standardUserDefaults] boolForKey: @"CheckOsiriXUpdates4"] == YES && [[NSUserDefaults standardUserDefaults] boolForKey: @"hideListenerError"] == NO) || verboseUpdateCheck == YES)
+				if( ([[NSUserDefaults standardUserDefaults] boolForKey: @"CheckHorosUpdates"] == YES && [[NSUserDefaults standardUserDefaults] boolForKey: @"hideListenerError"] == NO) || verboseUpdateCheck == YES)
 				{
                     if( verboseAfterCrash)
                         [self performSelectorOnMainThread:@selector(displayUpdateMessage:) withObject:@"UPDATECRASH" waitUntilDone: NO];
@@ -5841,7 +5792,7 @@ static NSMutableDictionary* _receivingDict = nil;
 {
     NSLog(@"Unicode test: مرحبا - 你好 - שלום");
     
-    [[FRFeedbackReporter sharedReporter] setDelegate:self];
+    [[FRFeedbackReporter sharedReporter] setDelegate:(id<FRFeedbackReporterDelegate>) self];
     
     //[[FRFeedbackReporter sharedReporter] reportFeedback];
     //return;

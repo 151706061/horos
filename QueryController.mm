@@ -99,7 +99,9 @@ extern "C"
 
 @implementation QueryController
 
-@synthesize autoQuery, autoQueryLock, outlineView, DatabaseIsEdited, currentAutoQR, authView;
+@synthesize autoQuery;
+@synthesize autoQueryLock;
+@synthesize outlineView, DatabaseIsEdited, currentAutoQR, authView;
 
 + (void) queryTest: (NSDictionary*) aServer
 {
@@ -3361,8 +3363,10 @@ extern "C"
             {
                 int i = 0;
                 
-                for( NSDictionary *QRInstance in autoQRInstances)
+                for(int QRInstanceIndex = 0; i < [autoQRInstances count]; i++)
                 {
+                    NSDictionary *QRInstance = [[autoQRInstances objectAtIndex:QRInstanceIndex] retain];
+                    
                     if( [[QRInstance objectForKey: @"autoRefreshQueryResults"] intValue] != 0)
                     {
                         if( --autoQueryRemainingSecs[ i] <= 0)
@@ -3370,7 +3374,15 @@ extern "C"
                             if( [autoQueryLock tryLock])
                             {
                                 if( i == currentAutoQR)
+                                {
                                     [self saveSettings];
+                                    
+                                    if (QRInstance != [autoQRInstances objectAtIndex:QRInstanceIndex])
+                                    {
+                                        [QRInstance release];
+                                        QRInstance = [[autoQRInstances objectAtIndex:QRInstanceIndex] retain];
+                                    }
+                                }
                                 
                                 [[AppController sharedAppController] growlTitle: NSLocalizedString( @"Q&R Auto-Query", nil) description: NSLocalizedString( @"Refreshing...", nil) name: @"autoquery"];
                                 
@@ -3395,6 +3407,8 @@ extern "C"
                         }
                     }
                     i++;
+                    
+                    [QRInstance release];
                 }
             }
         }
@@ -3806,6 +3820,8 @@ extern "C"
 			[dictionary setObject: [[[object valueForKey:@"hostname"] copy] autorelease] forKey:@"hostname"];
 			[dictionary setObject: [[[object valueForKey:@"port"] copy] autorelease] forKey:@"port"];
 			[dictionary setObject: [[[object valueForKey:@"transferSyntax"] copy] autorelease] forKey:@"transferSyntax"];
+            
+            [dictionary setObject: [[NSUserDefaults defaultAETitle] copy] forKey: @"moveDestination"];
 			
 			NSDictionary *dstDict = nil;
 			
@@ -4800,7 +4816,7 @@ extern "C"
 			
             [self willChangeValueForKey: @"instancesMenuList"];
             
-            autoQRInstances = [[[NSUserDefaults standardUserDefaults] objectForKey: @"savedAutoDICOMQuerySettingsArray"] mutableCopy];
+            autoQRInstances = [[[NSUserDefaults standardUserDefaults] objectForKey:@"savedAutoDICOMQuerySettingsArray"] mutableCopy];
             
             if( autoQRInstances == nil)
                 autoQRInstances = [NSMutableArray new];
@@ -5006,7 +5022,11 @@ extern "C"
         {
             @synchronized( autoQRInstances)
             {
-                [[autoQRInstances objectAtIndex: currentAutoQR] addEntriesFromDictionary: [self savePresetInDictionaryWithDICOMNodes: YES]];
+                NSMutableDictionary* newDic = [[autoQRInstances objectAtIndex: currentAutoQR] mutableCopy];
+                [newDic addEntriesFromDictionary: [self savePresetInDictionaryWithDICOMNodes: YES]];
+                
+                if (newDic != nil)
+                    [autoQRInstances replaceObjectAtIndex:currentAutoQR withObject:newDic];
                 
                 NSMutableArray *resultsArrays = [NSMutableArray array];
                 

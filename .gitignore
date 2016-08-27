@@ -36,14 +36,11 @@ Binaries/GDCMLibs/
 Binaries/weasis/
 Binaries/._OsiriX Report.template
 Binaries/FeedbackReporter.framework/
-options.h
-url.h
+Binaries/openssl
 
 *.xcscheme
 xcuserdata/
-
 DerivedData/
-
 *.xcworkspacedata
 
 

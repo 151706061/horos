@@ -91,9 +91,13 @@ static		NSDictionary				*_hotKeyDictionary = nil, *_hotKeyModifiersDictionary = 
 static		NSRecursiveLock				*drawLock = nil;
 static		NSMutableArray				*globalStringTextureCache = nil;
 
-NSString *pasteBoardOsiriX = @"OsiriX pasteboard";
-NSString *pasteBoardOsiriXPlugin = @"OsiriXPluginDataType";
-NSString *OsirixPluginPboardUTI = @"com.opensource.osirix.plugin.uti";
+NSString * const pasteBoardHoros = @"Horos pasteboard";
+NSString * const pasteBoardHorosPlugin = @"HorosPluginDataType";
+NSString * const HorosPluginPboardUTI = @"com.opensource.horos.plugin.uti";
+
+NSString * const pasteBoardOsiriX = @"OsiriX pasteboard";
+NSString * const pasteBoardOsiriXPlugin = @"OsiriXPluginDataType";
+NSString * const OsirixPluginPboardUTI = @"com.opensource.osirix.plugin.uti";
 
 // intersect3D_SegmentPlane(): intersect a segment and a plane
 //    Input:  S = a segment, and Pn = a plane = {Point V0; Vector n;}
@@ -13366,15 +13370,15 @@ NSInteger studyCompare(ViewerController *v1, ViewerController *v2, void *context
         
         if( [self dicomImage])
         {
-            [pbTypes addObject: pasteBoardOsiriX];
+            [pbTypes addObject: pasteBoardHoros];
             [pboard declareTypes:pbTypes owner:self];
-            [pboard setData:nil forType:pasteBoardOsiriX];
+            [pboard setData:nil forType:pasteBoardHoros];
         }
         else
             [pboard declareTypes:pbTypes  owner:self];
         
         NSData *pDataDCMView = [NSData dataWithBytes:&self length:sizeof(DCMView*)];
-        [pboard setData:pDataDCMView forType:pasteBoardOsiriX];
+        [pboard setData:pDataDCMView forType:pasteBoardHoros];
         
         [pboard setData: [image TIFFRepresentation] forType: NSTIFFPboardType];
         

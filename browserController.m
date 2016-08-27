@@ -95,6 +95,7 @@
 #import "BrowserMatrix.h"
 #import "DicomAlbum.h"
 #import "PluginManager.h"
+#import "PluginManagerController.h"
 #import "N2OpenGLViewWithSplitsWindow.h"
 #import "XMLController.h"
 #import "WebPortalConnection.h"
@@ -175,7 +176,6 @@ static NSString *smartAlbumDistantArraySync = @"smartAlbumDistantArraySync";
 
 extern int delayedTileWindows;
 extern BOOL NEEDTOREBUILD;//, COMPLETEREBUILD;
-
 
 #pragma deprecated(asciiString)
 NSString* asciiString(NSString* str)
@@ -1514,7 +1514,7 @@ static NSConditionLock *threadLock = nil;
         for( int i = 0; i < [filenames count]; i++)
         {
             NSString *aPath = [filenames objectAtIndex:i];
-            if ([[aPath pathExtension] isEqualToString:@"osirixplugin"])
+            if ([[aPath pathExtension] isEqualToString:@"horosplugin"] || [[aPath pathExtension] isEqualToString:@"osirixplugin"])
                 [pluginsArray addObject:aPath];
         }
         
@@ -5392,9 +5392,19 @@ static NSConditionLock *threadLock = nil;
                                 [params addObjectsFromArray: [NSArray arrayWithObjects: @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,0020)", destStudy.patientID], @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,0010)", originalPatientName], @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,0030)", originalBirthDate], nil]];
                                 [params addObjectsFromArray: [NSArray arrayWithObjects: @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,1000)", existingOtherPatientIDs], @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,1001)", existingOtherPatientNames], nil]];
                                 
-                                NSMutableArray *files = [NSMutableArray arrayWithArray: [[study paths] allObjects]];
                                 
-                                if( files)
+                                NSArray* tagAndValues = [NSArray arrayWithObjects:
+                                                                                    [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,0020)"],(destStudy.patientID?destStudy.patientID:@""),nil],
+                                                                                    [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,0010)"],(originalPatientName?originalPatientName:@""),nil],
+                                                                                    [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,0030)"],(originalBirthDate?originalBirthDate:@""),nil],
+                                                                                    [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,1000)"],(existingOtherPatientIDs?existingOtherPatientIDs:@""),nil],
+                                                                                    [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,1001)"],(existingOtherPatientNames?existingOtherPatientNames:@""),nil],
+                                nil];
+                                
+                                
+                                NSMutableArray *files = [NSMutableArray arrayWithArray:[[study paths] allObjects]];
+                                
+                                if (files)
                                 {
                                     [files removeDuplicatedStrings];
                                     
@@ -5402,12 +5412,15 @@ static NSConditionLock *threadLock = nil;
                                     
                                     @try
                                     {
-                                        NSStringEncoding encoding = [NSString encodingForDICOMCharacterSet: [[DicomFile getEncodingArrayForFile: [files lastObject]] objectAtIndex: 0]];
+                                        //NSStringEncoding encoding = [NSString encodingForDICOMCharacterSet: [[DicomFile getEncodingArrayForFile: [files lastObject]] objectAtIndex: 0]];
+                                        //[XMLController modifyDicom: params encoding: encoding];
                                         
-                                        [XMLController modifyDicom: params encoding: encoding];
+                                        [XMLController modifyDicom:tagAndValues dicomFiles:files];
                                         
                                         for( id loopItem in files)
-                                            [[NSFileManager defaultManager] removeFileAtPath: [loopItem stringByAppendingString:@".bak"] handler:nil];
+                                        {
+                                            [[NSFileManager defaultManager] removeFileAtPath:[loopItem stringByAppendingString:@".bak"] handler:nil];
+                                        }
                                     }
                                     @catch (NSException * e)
                                     {
@@ -5560,13 +5573,29 @@ static NSConditionLock *threadLock = nil;
                             {
                                 //                                NSString *logLine = [NSString stringWithFormat: @"---- Study Unify: %@ %@ -> %@ %@", study.name, study.patientID, destStudy.name, destStudy.patientID, nil];
                                 
+                                NSMutableArray* tagAndValues = [NSMutableArray array];
+                                
                                 if( [destStudy.patientID isEqualToString: study.patientID] == NO || [destStudy.name isEqualToString: study.name] == NO)
                                 {
                                     [params addObjectsFromArray: [NSArray arrayWithObjects: @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,0020)", destStudy.patientID], @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,0010)", originalPatientName], @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,0030)", originalBirthDate], nil]];
                                     [params addObjectsFromArray: [NSArray arrayWithObjects: @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,1000)", existingOtherPatientIDs], @"-i", [NSString stringWithFormat: @"%@=%@", @"(0010,1001)", existingOtherPatientNames], nil]];
+                                    
+                                    [tagAndValues addObjectsFromArray:[NSArray arrayWithObjects:
+                                                                                                [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,0020)"],(destStudy.patientID?destStudy.patientID:@""),nil],
+                                                                                                [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,0010)"],(originalPatientName?originalPatientName:@""),nil],
+                                                                                                [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,0030)"],(originalBirthDate?originalBirthDate:@""),nil],
+                                                                                                [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,1000)"],(existingOtherPatientIDs?existingOtherPatientIDs:@""),nil],
+                                                                                                [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0010,1001)"],(existingOtherPatientNames?existingOtherPatientNames:@""),nil],
+                                                                                                nil]];
                                 }
                                 
                                 [params addObjectsFromArray: [NSArray arrayWithObjects: @"-i", [NSString stringWithFormat: @"%@=%@", @"(0020,0010)", originalStudyID], @"-i", [NSString stringWithFormat: @"%@=%@", @"(0020,000D)", originalStudyInstanceUID], @"-i", [NSString stringWithFormat: @"%@=%@", @"(0008,1030)", originalStudyDescription], nil]];
+                                
+                                [tagAndValues addObjectsFromArray:[NSArray arrayWithObjects:
+                                                                                            [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0020,0010)"],(originalStudyID?originalStudyID:@""),nil],
+                                                                                            [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0020,000D)"],(originalStudyInstanceUID?originalStudyInstanceUID:@""),nil],
+                                                                                            [NSArray  arrayWithObjects:[DCMAttributeTag tagWithTagString:@"(0008,1030)"],(originalStudyDescription?originalStudyDescription:@""),nil],
+                                                                                            nil]];
                                 
                                 NSMutableArray *files = [NSMutableArray arrayWithArray: [[study paths] allObjects]];
                                 
@@ -5578,12 +5607,15 @@ static NSConditionLock *threadLock = nil;
                                     
                                     @try
                                     {
-                                        NSStringEncoding encoding = [NSString encodingForDICOMCharacterSet: [[DicomFile getEncodingArrayForFile: [files lastObject]] objectAtIndex: 0]];
+                                        //NSStringEncoding encoding = [NSString encodingForDICOMCharacterSet: [[DicomFile getEncodingArrayForFile: [files lastObject]] objectAtIndex: 0]];
+                                        //[XMLController modifyDicom: params encoding: encoding];
                                         
-                                        [XMLController modifyDicom: params encoding: encoding];
+                                        [XMLController modifyDicom:tagAndValues dicomFiles:files];
                                         
                                         for( id loopItem in files)
+                                        {
                                             [[NSFileManager defaultManager] removeFileAtPath: [loopItem stringByAppendingString:@".bak"] handler:nil];
+                                        }
                                     }
                                     @catch (NSException * e)
                                     {
@@ -6675,7 +6707,8 @@ static NSConditionLock *threadLock = nil;
     {
         if ([[item valueForKey:@"type"] isEqualToString: @"Study"])
         {
-            if( [[tableColumn identifier] isEqualToString:@"lockedStudy"]) [cell setTransparent: NO];
+            if( [[tableColumn identifier] isEqualToString:@"lockedStudy"])
+                [cell setTransparent: NO];
             
             if( [item isDistant])
             {
@@ -6761,7 +6794,8 @@ static NSConditionLock *threadLock = nil;
         }
         else
         {
-            if( [[tableColumn identifier] isEqualToString:@"lockedStudy"]) [cell setTransparent: YES];
+            if( [[tableColumn identifier] isEqualToString:@"lockedStudy"])
+                [cell setTransparent: YES];
             
             [cell setFont: [NSFont boldSystemFontOfSize: [self fontSize: @"dbSeriesFont"]]];
         }
@@ -8780,6 +8814,23 @@ static BOOL withReset = NO;
             cell = [oMatrix selectedCell];
         }
         
+        
+//        [cell setLineBreakMode: NSLineBreakByCharWrapping];
+//        [cell setFont:[NSFont systemFontOfSize: [self fontSize: @"dbMatrixFont"]]];
+//        
+//        [cell setImagePosition: NSImageBelow];
+//        [cell setTransparent:NO];
+//        [cell setEnabled:YES];
+//        
+//        [cell setButtonType:NSPushOnPushOffButton];
+//        [cell setBezelStyle:NSShadowlessSquareBezelStyle];
+//        [cell setShowsStateBy:NSPushInCellMask];
+//        [cell setHighlightsBy:NSContentsCellMask];
+//        [cell setImageScaling:NSImageScaleProportionallyDown];
+//        [cell setBordered:YES];
+        
+        
+        
         NSManagedObject   *aFile = [databaseOutline itemAtRow:[databaseOutline selectedRow]];
         if ([[aFile valueForKey:@"type"] isEqualToString:@"Series"] &&
             [[[aFile valueForKey:@"images"] allObjects] count] == 1 &&
@@ -9199,6 +9250,26 @@ static BOOL withReset = NO;
     {
         NSManagedObject *dcmFile = [databaseOutline itemAtRow:[databaseOutline selectedRow]];
         
+//        if (dcmFile)
+//        {
+//            [theCell setLineBreakMode: NSLineBreakByCharWrapping];
+//            [theCell setFont:[NSFont systemFontOfSize: [self fontSize: @"dbMatrixFont"]]];
+//            
+////            [theCell setRepresentedObject: [dcmFile objectID]];
+//            
+//            [theCell setImagePosition: NSImageBelow];
+//            [theCell setTransparent:NO];
+//            [theCell setEnabled:YES];
+//            
+//            [theCell setButtonType:NSPushOnPushOffButton];
+//            [theCell setBezelStyle:NSShadowlessSquareBezelStyle];
+//            //[theCell setShowsStateBy:NSPushInCellMask];
+//            [theCell setHighlightsBy:NSContentsCellMask];
+//            [theCell setImageScaling:NSImageScaleProportionallyDown];
+//            [theCell setBordered:YES];
+//        }
+        
+        
         if( [[dcmFile valueForKey:@"type"] isEqualToString: @"Series"] && [[[dcmFile valueForKey:@"images"] allObjects] count] > 1)
         {
             [animationSlider setIntValue: [theCell tag]];
@@ -9219,6 +9290,25 @@ static BOOL withReset = NO;
     if( [theCell tag] >= 0)
     {
         NSManagedObject *dcmFile = [databaseOutline itemAtRow:[databaseOutline selectedRow]];
+        
+        if (dcmFile)
+        {
+//            [theCell setLineBreakMode: NSLineBreakByCharWrapping];
+//            [theCell setFont:[NSFont systemFontOfSize: [self fontSize: @"dbMatrixFont"]]];
+//            
+//            [theCell setRepresentedObject: [dcmFile objectID]];
+//            
+//            [theCell setImagePosition: NSImageBelow];
+//            [theCell setTransparent:NO];
+//            [theCell setEnabled:YES];
+//            
+//            [theCell setButtonType:NSPushOnPushOffButton];
+//            [theCell setBezelStyle:NSShadowlessSquareBezelStyle];
+//            [theCell setShowsStateBy:NSPushInCellMask];
+//            [theCell setHighlightsBy:NSContentsCellMask];
+//            [theCell setImageScaling:NSImageScaleProportionallyDown];
+//            [theCell setBordered:YES];
+        }
         
         if( [[dcmFile valueForKey:@"type"] isEqualToString: @"Study"] == NO)
         {
@@ -9337,13 +9427,24 @@ static BOOL withReset = NO;
             {
                 NSInteger rows, cols; [oMatrix getNumberOfRows:&rows columns:&cols]; if( cols < 1) cols = 1;
                 NSButtonCell* cell = [oMatrix cellAtRow:i/cols column:i%cols];
-                [cell setTransparent:NO];
-                [cell setEnabled:YES];
+                
                 [cell setLineBreakMode: NSLineBreakByCharWrapping];
                 [cell setFont:[NSFont systemFontOfSize: [self fontSize: @"dbMatrixFont"]]];
-                [cell setImagePosition: NSImageBelow];
-                [cell setAction: @selector(matrixPressed:)];
+                
                 [cell setRepresentedObject: [curFile objectID]];
+
+                [cell setImagePosition: NSImageBelow];
+                [cell setTransparent:NO];
+                [cell setEnabled:YES];
+
+                [cell setButtonType:NSPushOnPushOffButton];
+                [cell setBezelStyle:NSShadowlessSquareBezelStyle];
+//                [cell setShowsStateBy:NSPushInCellMask];
+//                [cell setHighlightsBy:NSContentsCellMask];
+                [cell setImageScaling:NSImageScaleProportionallyDown];
+                [cell setBordered:YES];
+                
+                [cell setAction: @selector(matrixPressed:)];
                 
                 if ( [modality isEqualToString: @"RTSTRUCT"])
                 {
@@ -9433,11 +9534,21 @@ static BOOL withReset = NO;
                     img = [ii retain];
                 }
                 
+                [cell setHighlightsBy:NSNoCellMask]; // don't show highlight
                 switch( [[NSUserDefaults standardUserDefaults] integerForKey: @"dbFontSize"])
                 {
-                    case -1: [cell setImage: [img imageByScalingProportionallyUsingNSImage: 0.6]]; break;
-                    case 0: [cell setImage: img]; break;
-                    case 1: [cell setImage: [img imageByScalingProportionallyUsingNSImage: 1.3]]; break;
+                    case -1:
+                        [cell setImage: [img imageByScalingProportionallyUsingNSImage: 0.6]];
+//                        [cell setAlternateImage: [img imageByScalingProportionallyUsingNSImage: 0.6]];
+                        break;
+                    case 0:
+                        [cell setImage: img];
+//                        [cell setAlternateImage:img];
+                        break;
+                    case 1:
+                        [cell setImage: [img imageByScalingProportionallyUsingNSImage: 1.3]];
+//                        [cell setAlternateImage:[img imageByScalingProportionallyUsingNSImage: 1.3]];
+                        break;
                 }
                 
                 if( setDCMDone == NO)
@@ -9461,17 +9572,27 @@ static BOOL withReset = NO;
             {  // Show Error Button
                 NSInteger rows, cols; [oMatrix getNumberOfRows:&rows columns:&cols];  if( cols < 1) cols = 1;
                 NSButtonCell* cell = [oMatrix cellAtRow:i/cols column:i%cols];
-                [cell setImage: nil];
-                [oMatrix setToolTip: NSLocalizedString(@"File not readable", nil) forCell:cell];
-                [cell setTitle: NSLocalizedString(@"File not readable", nil)];
+                
+                [cell setLineBreakMode: NSLineBreakByCharWrapping];
                 [cell setFont:[NSFont systemFontOfSize: [self fontSize: @"dbMatrixFont"]]];
+                
+                [cell setRepresentedObject: nil];
+                
                 [cell setImagePosition: NSImageBelow];
                 [cell setTransparent:NO];
                 [cell setEnabled:NO];
+                
                 [cell setButtonType:NSPushOnPushOffButton];
                 [cell setBezelStyle:NSShadowlessSquareBezelStyle];
+//                [cell setShowsStateBy:NSPushInCellMask];
+//                [cell setHighlightsBy:NSContentsCellMask];
+                [cell setImageScaling:NSImageScaleProportionallyDown];
+                [cell setBordered:YES];
+                
+                [oMatrix setToolTip: NSLocalizedString(@"File not readable", nil) forCell:cell];
+                [cell setTitle: NSLocalizedString(@"File not readable", nil)];
+                [cell setImage:nil];
                 [cell setTag:i];
-                [cell setRepresentedObject: nil];
             }
         }
         @catch( NSException *ne)
@@ -10086,69 +10207,69 @@ constrainSplitPosition:(CGFloat)proposedPosition
 
 - (void) windowDidChangeScreen:(NSNotification *)aNotification
 {
-    NSLog(@"windowDidChangeScreen");
-    
-    @try {
-        // Did the user change the window resolution?
+        NSLog(@"windowDidChangeScreen");
         
-        BOOL screenChanged = NO, dbScreenChanged = NO;
-        
-        float ratioX = 1, ratioY = 1;
-        
-        for( int i = 0 ; i < [[NSScreen screens] count] ; i++)
-        {
-            NSScreen *s = [[NSScreen screens] objectAtIndex: i];
+        @try {
+            // Did the user change the window resolution?
             
-            if( NSEqualRects( [s visibleFrame], visibleScreenRect[ i]) == NO)
+            BOOL screenChanged = NO, dbScreenChanged = NO;
+            
+            float ratioX = 1, ratioY = 1;
+            
+            for( int i = 0 ; i < [[NSScreen screens] count] ; i++)
             {
-                screenChanged = YES;
+                NSScreen *s = [[NSScreen screens] objectAtIndex: i];
                 
-                if( [[self window] screen] == s)
+                if( NSEqualRects( [s visibleFrame], visibleScreenRect[ i]) == NO)
                 {
-                    NSLog( @"[[self window] frame]: %@", NSStringFromRect( [[self window] frame]));
-                    NSLog( @"visibleScreenRect[ i]: %@", NSStringFromRect( visibleScreenRect[ i]));
+                    screenChanged = YES;
                     
-                    dbScreenChanged = YES;
+                    if( [[self window] screen] == s)
+                    {
+                        NSLog( @"[[self window] frame]: %@", NSStringFromRect( [[self window] frame]));
+                        NSLog( @"visibleScreenRect[ i]: %@", NSStringFromRect( visibleScreenRect[ i]));
+                        
+                        dbScreenChanged = YES;
+                    }
+                    
+                    ratioX = visibleScreenRect[ i].size.width / [s visibleFrame].size.width;
+                    ratioY = visibleScreenRect[ i].size.height / [s visibleFrame].size.height;
+                    
+                    visibleScreenRect[ i] = [s visibleFrame];
+                }
+            }
+            
+            if( dbScreenChanged)
+            {
+                //[[self window] zoom: self];
+            }
+            
+            if( screenChanged)
+            {
+                for( ViewerController *v in [ViewerController getDisplayed2DViewers])
+                {
+                    NSRect r = [[v window] frame];
+                    
+                    r.origin.x /= ratioX;
+                    r.origin.y /= ratioY;
+                    
+                    r.size.width /= ratioX;
+                    r.size.height /= ratioY;
+                    
+                    [[v window] setFrame: r display: NO];
                 }
                 
-                ratioX = visibleScreenRect[ i].size.width / [s visibleFrame].size.width;
-                ratioY = visibleScreenRect[ i].size.height / [s visibleFrame].size.height;
-                
-                visibleScreenRect[ i] = [s visibleFrame];
-            }
-        }
-        
-        if( dbScreenChanged)
-        {
-            [[self window] zoom: self];
-        }
-        
-        if( screenChanged)
-        {
-            for( ViewerController *v in [ViewerController getDisplayed2DViewers])
-            {
-                NSRect r = [[v window] frame];
-                
-                r.origin.x /= ratioX;
-                r.origin.y /= ratioY;
-                
-                r.size.width /= ratioX;
-                r.size.height /= ratioY;
-                
-                [[v window] setFrame: r display: NO];
+                if( delayedTileWindows)
+                    [NSObject cancelPreviousPerformRequestsWithTarget:[AppController sharedAppController] selector:@selector(tileWindows:) object:nil];
+                delayedTileWindows = YES;
+                [[AppController sharedAppController] performSelector: @selector(tileWindows:) withObject:nil afterDelay: 0.1];
             }
             
-            if( delayedTileWindows)
-                [NSObject cancelPreviousPerformRequestsWithTarget:[AppController sharedAppController] selector:@selector(tileWindows:) object:nil];
-            delayedTileWindows = YES;
-            [[AppController sharedAppController] performSelector: @selector(tileWindows:) withObject:nil afterDelay: 0.1];
         }
-        
-    }
-    @catch (NSException *exception) {
-        N2LogException( exception);
-        [[AppController sharedAppController] closeAllViewers: self];
-    }
+        @catch (NSException *exception) {
+            N2LogException( exception);
+            [[AppController sharedAppController] closeAllViewers: self];
+        }
 }
 
 -(void)previewMatrixScrollViewFrameDidChange:(NSNotification*)note
@@ -10271,7 +10392,7 @@ constrainSplitPosition:(CGFloat)proposedPosition
         }
         else
         {
-#define MINIMUMSIZEFORCOMPARATIVEDRAWER 180
+#define MINIMUMSIZEFORCOMPARATIVEDRAWER 192
             NSView* left = [[sender subviews] objectAtIndex:0];
             NSView* right = [[sender subviews] objectAtIndex:1];
             
@@ -10296,8 +10417,8 @@ constrainSplitPosition:(CGFloat)proposedPosition
             rightFrame.size.height = splitFrame.size.height;
             rightFrame.origin.x = leftFrame.origin.x + leftFrame.size.width + dividerThickness;
             rightFrame.size.width = availableWidth - leftFrame.size.width;
-            if( rightFrame.size.width >= 300)
-                rightFrame.size.width = 300;
+            if( rightFrame.size.width >= 192)
+                rightFrame.size.width = 192;
             
             leftFrame.size.height = splitFrame.size.height;
             leftFrame.size.width = availableWidth - rightFrame.size.width;
@@ -10464,7 +10585,7 @@ constrainSplitPosition:(CGFloat)proposedPosition
         if( gHorizontalHistory)
             return MINIMUMSIZEFORCOMPARATIVEDRAWER_HORZ;
         else
-            return [sender bounds].size.width-300;
+            return [sender bounds].size.width-192;
     }
     
     if ([sender isEqual: bannerSplit])
@@ -10484,7 +10605,7 @@ constrainSplitPosition:(CGFloat)proposedPosition
         return [sender bounds].size.height- (2*[oMatrix cellSize].height);
     
     if (sender == splitDrawer)
-        return 300;
+        return 192;
     
     if (sender == splitComparative)
     {
@@ -12691,6 +12812,7 @@ constrainSplitPosition:(CGFloat)proposedPosition
                             [cell setImagePosition: NSImageBelow];
                             [cell setTitle:[NSString stringWithFormat:NSLocalizedString(@"%d/%d Images", nil), i+1, [[splittedSeries objectAtIndex:i] count]]];
                             [cell setImage: img];
+                            [cell setAlternateImage:img];
                             [dcmPix release];
                         }
                     }
@@ -12714,6 +12836,7 @@ constrainSplitPosition:(CGFloat)proposedPosition
                                 [cell setImagePosition: NSImageBelow];
                                 [cell setTitle:[NSString stringWithFormat:NSLocalizedString(@"%d/%d Images", nil), i+1, [splittedSeries count]]];
                                 [cell setImage: img];
+                                [cell setAlternateImage:img];
                                 [dcmPix release];
                             }
                         }
@@ -13959,6 +14082,9 @@ static NSArray*	openSubSeriesArray = nil;
 {
     @try
     {
+        //[self window].appearance = [NSAppearance appearanceNamed:NSAppearanceNameVibrantDark];;
+        //[[self window] invalidateShadow];
+        
         //	dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
         //
         //	dispatch_apply(count, queue,
@@ -14281,19 +14407,51 @@ static NSArray*	openSubSeriesArray = nil;
     }
     
     
-    BOOL firstTimeExecution = ([[NSUserDefaults standardUserDefaults] objectForKey:@"FIRSTTIMEEXECUTION"] == nil);
-    if (firstTimeExecution == YES)
+    BOOL firstTimeExecution = ([[NSUserDefaults standardUserDefaults] objectForKey:@"FIRST_TIME_EXECUTION_2_0"] == nil);
+    BOOL foundNotValidatedOsiriXPlugins = NO;
+    
+    if (firstTimeExecution)
     {
-        [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithBool:NO] forKey:@"FIRSTTIMEEXECUTION"];
+        [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithBool:YES] forKey:@"FIRST_TIME_EXECUTION_2_0"];
+        
+        
+        
+        NSArray* installedPlugins = [self->pluginManagerController plugins];
+        for (NSDictionary* pluginDesc in installedPlugins)
+        {
+            if ([[pluginDesc objectForKey:@"HorosCompatiblePlugin"] boolValue] == NO)
+            {
+                foundNotValidatedOsiriXPlugins = YES;
+                break;
+            }
+        }
+        
         
         [[NSUserDefaults standardUserDefaults] setInteger:CPRInterpolationModeCubic
                                                    forKey:@"selectedCPRInterpolationMode"];
         
+        
         dispatch_async(dispatch_get_main_queue(), ^() {
+            
             [self restoreWindowState:self];
-            [[self window] performZoom:self];
+            
         });
     }
+    
+    
+    
+    if (firstTimeExecution == YES && foundNotValidatedOsiriXPlugins == YES)
+    {
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert addButtonWithTitle:NSLocalizedString(@"OK",nil)];
+        [alert setMessageText:NSLocalizedString(@"Not validated OsiriX plugins were detected!",nil)];
+        [alert setInformativeText:NSLocalizedString(@"Not validated OsiriX plugins may cause Horos run-time errors. In case of problems, you can disable/uninstall them in [Plugins => Plugin Manager]. A brand new Horos plugin database is being built for you.",nil)];
+        [alert setAlertStyle:NSWarningAlertStyle];
+        [alert runModal];
+        [alert release];
+    }
+    
+    
     
     [O2HMigrationAssistant performStartupO2HTasks:self];
 }
@@ -17854,8 +18012,10 @@ restart:
     {
         //		[self.window makeKeyAndOrderFront:sender];
         
-        if( [sender tag] == 0 && [QueryController currentQueryController] == nil) [[QueryController alloc] initAutoQuery: NO];
-        else if( [sender tag] == 1 && [QueryController currentAutoQueryController] == nil) [[QueryController alloc] initAutoQuery: YES];
+        if ([sender tag] == 0 && [QueryController currentQueryController] == nil)
+            [[QueryController alloc] initAutoQuery: NO];
+        else if ([sender tag] == 1 && [QueryController currentAutoQueryController] == nil)
+            [[QueryController alloc] initAutoQuery: YES];
         
         if( [sender tag] == 0)
             [[QueryController currentQueryController] showWindow:self];
@@ -18080,7 +18240,9 @@ restart:
 
 - (IBAction) viewXML:(id) sender
 {
-    XMLController * xmlController = [[XMLController alloc] initWithImage: [self firstObjectForDatabaseMatrixSelection] windowName:[NSString stringWithFormat: NSLocalizedString( @"Meta-Data: %@", nil), [[self firstObjectForDatabaseMatrixSelection] valueForKey:@"completePath"]] viewer: nil];
+    XMLController * xmlController = [[XMLController alloc] initWithImage: [self firstObjectForDatabaseMatrixSelection]
+                                                              windowName:[NSString stringWithFormat: NSLocalizedString( @"Meta-Data: %@", nil), [[self firstObjectForDatabaseMatrixSelection] valueForKey:@"completePath"]]
+                                                                  viewer: nil];
     
     [xmlController showWindow:self];
 }
@@ -19180,7 +19342,7 @@ restart:
     NSView* left = [[splitDrawer subviews] objectAtIndex:0];
     [left setHidden:NO];
     NSRect f = left.frame;
-    f.size.width  = 180;
+    f.size.width  = 192;
     [left setFrame:f];
     
     

@@ -823,7 +823,7 @@ static NSHost *currentHost = nil;
 	[presets addObject: shading];
 	
 	[defaultValues setObject:presets forKey:@"shadingsPresets"];
-	[defaultValues setObject:@"2" forKey:@"UseDelaunayFor3DRoi"];
+	[defaultValues setObject:@"0" forKey:@"UseDelaunayFor3DRoi"];
 	[defaultValues setObject:@"1" forKey:@"EJECTCDDVD"];
 	[defaultValues setObject:@"1" forKey:@"automaticWorkspaceLoad"];
 	[defaultValues setObject:@"1" forKey:@"automaticWorkspaceSave"];
@@ -991,7 +991,7 @@ static NSHost *currentHost = nil;
     [defaultValues setObject: @"0" forKey: @"TryIMAGELevelDICOMRetrieveIfLocalImages"];
 	[defaultValues setObject: @"1" forKey: @"SingleProcessMultiThreadedListener"];
 	[defaultValues setObject: @"0" forKey: @"AUTHENTICATION"];
-	[defaultValues setObject: @"1" forKey: @"CheckOsiriXUpdates4"];
+	[defaultValues setObject: @"1" forKey: @"CheckHorosUpdates"];
 	[defaultValues setObject: @"-1" forKey:@"MOUNT"];
 	[defaultValues setObject: @"1" forKey:@"CDDVDEjectAfterAutoCopy"];
 //	[defaultValues setObject: @"1" forKey:@"UNMOUNT"];

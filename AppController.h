@@ -55,7 +55,6 @@
 
 #import <AppKit/AppKit.h>
 #import "XMLRPCMethods.h"
-#import <FeedbackReporter/FRFeedbackReporter.h>
 
 #include "options.h"
 
@@ -119,7 +118,7 @@ extern "C"
 
 extern AppController* OsiriX;
 
-@interface AppController : NSObject	<NSNetServiceBrowserDelegate, NSNetServiceDelegate, NSSoundDelegate, NSMenuDelegate, FRFeedbackReporterDelegate> // GrowlApplicationBridgeDelegate
+@interface AppController : NSObject	<NSNetServiceBrowserDelegate, NSNetServiceDelegate, NSSoundDelegate, NSMenuDelegate > //, FRFeedbackReporterDelegate> // GrowlApplicationBridgeDelegate
 {
 	IBOutlet BrowserController		*browserController;
 
@@ -192,7 +191,7 @@ extern AppController* OsiriX;
 
 #pragma mark-
 #pragma mark  Server management
-- (void) terminate :(id) sender; /**< Terminate listener (Q/R SCP) */
+- (IBAction) terminate :(id) sender; /**< Terminate listener (Q/R SCP) */
 - (void) restartSTORESCP; /**< Restart listener (Q/R SCP) */
 - (void) startSTORESCP:(id) sender; /**< Start listener (Q/R SCP) */
 - (void) startSTORESCPTLS:(id) sender; /**< Start TLS listener (Q/R SCP) */
